@@ -64,8 +64,10 @@ class EncodingResource(Resource):
     def _getEncoder(self, request):
         accept = request.getHeader("Accept")
 
-        if accept is None:
-            self._unacceptable()
+        if accept is None or accept == '*/*':
+            encoder = self.defaultEncoder
+            request.setHeader("Content-Type", encoder.contentType)
+            return encoder
 
         parsed = _parseAccept(accept)
         accepted = [contentType.lower() for contentType, _ in parsed]
