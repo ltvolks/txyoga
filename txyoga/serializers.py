@@ -15,6 +15,9 @@ from txyoga import errors, interface
 
 
 def forContentType(contentType):
+    """
+    Decorate an encoding/decoding function with a contentType attribute
+    """
     def decorator(encoder):
         encoder.contentType = contentType
         return encoder
@@ -61,9 +64,31 @@ class EncodingResource(Resource):
     decoders = [jsonDecode]
 
 
-    def _getEncoder(self, request):
-        accept = request.getHeader("Accept")
+    def _getEncoderTypes(self):
+        """Return a list of contentTypes for each supported encoder"""
+        return [encoder.contentType for encoder in self.encoders]
+    encoderTypes = property(_getEncoderTypes)
 
+    
+    def _getDecoderTypes(self):
+        """Return a list of contentTypes for each supported decoder"""
+        return [decoder.contentType for decoder in self.decoders]
+    decoderTypes = property(_getDecoderTypes)
+
+
+    def _getEncoder(self, request):
+        """
+        Return encoder for requested contentType.
+        
+        Clients that are not specific about what they Accept will receive
+        default encoded responses.
+
+        :param request: a `twisted.web.request`
+        :returns: an encoding function
+        :raises: errors.UnacceptableRequest
+        """
+        accept = request.getHeader("Accept")
+        
         if accept is None or accept == '*/*':
             encoder = self.defaultEncoder
             request.setHeader("Content-Type", encoder.contentType)
@@ -78,26 +103,27 @@ class EncodingResource(Resource):
                     request.setHeader("Content-Type", encoder.contentType)
                     return encoder
 
-        self._unacceptable(accepted)
-
-
-    def _unacceptable(self, accepted=None):
-        supported = [encoder.contentType for encoder in self.encoders]
-        raise errors.UnacceptableRequest(supported, accepted)
+        # No supported encoders found to match accepted contentTypes
+        raise errors.UnacceptableRequest(self.encoderTypes, accepted)
 
 
     def _getDecoder(self, request):
+        """
+        Return decoder for requested contentType
+
+        :param request: a `twisted.web.request`
+        :returns: a decoding function
+        :raises: errors.MissingContentType, errors.UnsupportedContentType
+        """
         contentType = request.getHeader("Content-Type")
         if contentType is None:
-            supported = [decoder.contentType for decoder in self.decoders]
-            raise errors.MissingContentType(supported)
+            raise errors.MissingContentType(self.decoderTypes)
 
         for decoder in self.decoders:
             if decoder.contentType == contentType:
                 return decoder
 
-        supported = [decoder.contentType for decoder in self.decoders]
-        raise errors.UnsupportedContentType(supported, contentType)
+        raise errors.UnsupportedContentType(self.decoderTypes, contentType)
 
 
 
