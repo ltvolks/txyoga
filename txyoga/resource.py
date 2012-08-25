@@ -34,6 +34,10 @@ class Deleted(resource.Resource):
 
 
 def deferredRenderWithErrorReporting(method):
+    """
+    A decorator for render methods to add an errback which serializes errors 
+    and renders the response using the default encoder.
+    """
     def decorated(self, request):
         d = defer.maybeDeferred(method, self, request)
         d.addErrback(_reportError, request, self.defaultEncoder)
@@ -134,6 +138,9 @@ class CollectionResource(serializers.EncodingResource):
             elif request.method == "PUT":
                 return self._createElement(request, path)
 
+            elif request.method == "OPTIONS":
+                return self.render_OPTIONS(request)
+
         return self._collection.get(path).addCallback(resource.IResource)
 
 
@@ -161,6 +168,29 @@ class CollectionResource(serializers.EncodingResource):
 
 
     @deferredRenderWithErrorReporting
+    @serializers.withEncoder
+    def render_OPTIONS(self, request):
+        """
+        Return OPTIONS for the collection.
+
+        Response should inform clients about the collection interface, 
+        making it easier to construct links between collections and elements.
+        """       
+        options = self._collection.getOptions()
+        allowed = options.get('allowedMethods')
+        
+        if allowed:
+            request.setHeader("Allow", ', '.join(allowed))
+        if self.encoderTypes:
+            request.setHeader("Accept", ', '.join(self.encoderTypes))
+        
+        encoded = request.encoder(options)
+        request.write(encoded)
+        request.finish()
+
+        
+
+    @deferredRenderWithErrorReporting
     def render_POST(self, request):
         """
         Creates a new element in the collection.
@@ -178,14 +208,19 @@ class CollectionResource(serializers.EncodingResource):
         will display a part of the collection, one page at a
         time. Each page will have links to the previous and next
         pages.
+        
+        Pagination protocol requests a range of records using 2 parameters:
+            start = starting record
+            stop = ending record           
         """
         request.encoder = self._getEncoder(request)
 
         start, stop = self._getBounds(request)
         url = request.prePathURL()
         prevURL, nextURL = self._getPaginationURLs(url, start, stop)
-        response = {"prev": prevURL, "next": nextURL}
 
+        response = {"prev": prevURL, "next": nextURL}
+        
         d = self._collection.query(start=start, stop=stop)
 
         def _buildResponse(elements):

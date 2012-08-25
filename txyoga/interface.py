@@ -10,10 +10,27 @@ class ICollection(Interface):
     """
     A collection in a REST API.
     """
+    defaultElementClass = Attribute(
+        """
+        The default element class for this collection.
+        """)   
     exposedElementAttributes = Attribute(
         """
         The names of the attributes this collection exposes of its elements.
-        """)
+        """)   
+    pageSize = Attribute("Default page size when queried")
+    maxPageSize = Attribute("Maximum page size when queried")
+    count = Attribute("Current size of the collection")
+    description = Attribute("human-readable description of the collection")
+    allowedMethods = Attribute("Tuple of allowed HTTP methods")
+
+
+    def getOptions():
+        """
+        Return a dictionary of options intended to inform clients about the 
+        collection interface, making it easier for clients to construct links
+        between collections and elements.
+        """
 
 
     def createElementFromState(state):
@@ -71,7 +88,7 @@ class IElement(Interface):
 
     identifyingAttribute = Attribute(
         """
-        The attribtue used to define this element.
+        The attribute used to define this element.
 
         The value of this attribute must be unique in the collection.
         """)
@@ -89,7 +106,7 @@ class IElement(Interface):
         """
         Creates a new object from the given state.
 
-        Returns a `Deferred` that will fire with the new element.
+        Returns a ``Deferred`` that will fire with the new element.
         """
 
 
