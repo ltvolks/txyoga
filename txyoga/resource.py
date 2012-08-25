@@ -11,6 +11,9 @@ from twisted.internet import defer
 from twisted.python import log
 from twisted.web import http, resource, server
 
+from zope.interface import implements
+from zope.component import adapts
+
 from txyoga import errors, interface, serializers
 
 
@@ -109,6 +112,9 @@ class CollectionResource(serializers.EncodingResource):
     """
     A resource representing a REST collection.
     """
+    implements(resource.IResource)
+    adapts(interface.ICollection)
+
     def __init__(self, collection):
         serializers.EncodingResource.__init__(self)
         self._collection = collection
@@ -137,7 +143,7 @@ class CollectionResource(serializers.EncodingResource):
 
             elif request.method == "PUT":
                 return self._createElement(request, path)
-
+            
             elif request.method == "OPTIONS":
                 return self.render_OPTIONS(request)
 
@@ -296,6 +302,9 @@ class ElementResource(serializers.EncodingResource):
     """
     A resource representing an element in a collection.
     """
+    implements(resource.IResource)
+    adapts(interface.IElement)
+    
     def __init__(self, element):
         serializers.EncodingResource.__init__(self)
         self._element = element
