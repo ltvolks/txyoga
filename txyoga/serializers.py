@@ -87,22 +87,23 @@ class EncodingResource(Resource):
         :returns: an encoding function
         :raises: errors.UnacceptableRequest
         """
-        accept = request.getHeader("Accept")
+        accept = request.getHeader("Accept") or '*/*'
         
-        if accept is None or accept == '*/*':
-            encoder = self.defaultEncoder
-            request.setHeader("Content-Type", encoder.contentType)
-            return encoder
-
         parsed = _parseAccept(accept)
         accepted = [contentType.lower() for contentType, _ in parsed]
-
+                
         for contentType in accepted:
             for encoder in self.encoders:
                 if encoder.contentType == contentType:
                     request.setHeader("Content-Type", encoder.contentType)
                     return encoder
-
+        
+        # Use default encoder if wildcard is accepted
+        if '*/*' in accepted:
+            encoder = self.defaultEncoder
+            request.setHeader("Content-Type", encoder.contentType)
+            return encoder
+        
         # No supported encoders found to match accepted contentTypes
         raise errors.UnacceptableRequest(self.encoderTypes, accepted)
 
