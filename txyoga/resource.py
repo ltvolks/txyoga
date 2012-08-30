@@ -118,6 +118,10 @@ class CollectionResource(serializers.EncodingResource):
     def __init__(self, collection):
         serializers.EncodingResource.__init__(self)
         self._collection = collection
+        self.allowedMethods = (
+            getattr(self._collection, 'allowedMethods', False) or 
+            resource._computeAllowedMethods(self))
+
 
 
     @DeferredResource.returning
@@ -183,10 +187,8 @@ class CollectionResource(serializers.EncodingResource):
         making it easier to construct links between collections and elements.
         """       
         options = self._collection.getOptions()
-        allowed = options.get('allowedMethods')
         
-        if allowed:
-            request.setHeader("Allow", ', '.join(allowed))
+        request.setHeader("Allow", ', '.join(self.allowedMethods))
         if self.encoderTypes:
             request.setHeader("Accept", ', '.join(self.encoderTypes))
         
@@ -310,7 +312,7 @@ class ElementResource(serializers.EncodingResource):
         self._element = element
 
 
-    def getChild(self, path, request):
+    def getChild(self, path, request):      
         child = getattr(self._element, path)
         return resource.IResource(child)
 
