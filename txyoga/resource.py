@@ -74,6 +74,7 @@ def _renderResource(resource, request):
 
 
 class DeferredResource(object):
+    isLeaf = False
     def __init__(self, deferred, defaultEncoder):
         self.deferred = deferred
         self.defaultEncoder = defaultEncoder
@@ -313,7 +314,10 @@ class ElementResource(serializers.EncodingResource):
 
 
     def getChild(self, path, request):      
-        child = getattr(self._element, path)
+        request.encoder = self._getEncoder(request)
+        child = getattr(self._element, path, None)
+        if child is None:
+            child = errors.RESTErrorPage(errors.MissingElementError(path))
         return resource.IResource(child)
 
 
