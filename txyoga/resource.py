@@ -119,8 +119,14 @@ class CollectionResource(serializers.EncodingResource):
     def __init__(self, collection):
         serializers.EncodingResource.__init__(self)
         self._collection = collection
+        if hasattr(collection, 'encoders'):
+            self.encoders = collection.encoders
+        if hasattr(collection, 'decoders'):
+            self.encoders = collection.decoders
+        if hasattr(collection, 'defaultEncoder'):
+            self.defaultEncoder = collection.defaultEncoder
         self.allowedMethods = (
-            getattr(self._collection, 'allowedMethods', False) or 
+            getattr(collection, 'allowedMethods', False) or 
             resource._computeAllowedMethods(self))
 
 
@@ -311,9 +317,15 @@ class ElementResource(serializers.EncodingResource):
     def __init__(self, element):
         serializers.EncodingResource.__init__(self)
         self._element = element
+        if hasattr(element, 'encoders'):
+            self.encoders = element.encoders
+        if hasattr(element, 'decoders'):
+            self.encoders = element.decoders
+        if hasattr(element, 'defaultEncoder'):
+            self.defaultEncoder = element.defaultEncoder
 
 
-    def getChild(self, path, request):      
+    def getChild(self, path, request):
         request.encoder = self._getEncoder(request)
         child = getattr(self._element, path, None)
         if child is None:
